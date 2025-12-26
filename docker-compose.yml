@@ -1,0 +1,64 @@
+services:
+  vault:
+    image: hashicorp/vault:1.17
+    container_name: vault
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_ADDR: "http://127.0.0.1:8200"
+      VAULT_DEV_ROOT_TOKEN_ID: "root"
+    command: >
+      vault server -dev
+      -dev-root-token-id=root
+      -dev-listen-address=0.0.0.0:8200
+    ports:
+      - "8200:8200"
+    volumes:
+      - ./vault:/vault
+      - app-secrets:/secrets
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget -qO- http://127.0.0.1:8200/v1/sys/health | grep -q 'initialized'"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  postgres:
+    image: postgres:15
+    container_name: vault-postgres
+    environment:
+      POSTGRES_DB: appdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpassword
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+
+  app:
+    build: ./app
+    container_name: demo-app
+    depends_on:
+      vault:
+        condition: service_healthy
+    volumes:
+      - app-secrets:/secrets:ro
+    ports:
+      - "8081:8080"
+
+  agent:
+    image: hashicorp/vault:1.17
+    container_name: vault-agent
+    depends_on:
+      vault:
+        condition: service_healthy
+    environment:
+      VAULT_ADDR: "http://vault:8200"
+    volumes:
+      - app-secrets:/secrets
+      - ./vault/agent:/vault-agent
+    command: >
+      sh -c "vault agent -config=/vault-agent/config.hcl"
+
+volumes:
+  app-secrets:
+  pg-data:

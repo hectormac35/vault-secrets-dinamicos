@@ -1,0 +1,7 @@
+{{- with secret "database/creds/app-role" -}}
+{
+  "username": "{{ .Data.username }}",
+  "password": "{{ .Data.password }}",
+  "ttl": {{ .LeaseDuration }}
+}
+{{- end -}}
