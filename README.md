@@ -71,9 +71,6 @@ La solución está compuesta por los siguientes elementos:
 - Docker
 - Docker Compose
 
-### Pasos
-
-```bash
 ./levantar.sh
 Este comando:
 
