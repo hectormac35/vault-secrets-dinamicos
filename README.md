@@ -71,6 +71,8 @@ La solución está compuesta por los siguientes elementos:
 - Docker
 - Docker Compose
 
+- ### Pasos
+
 ./levantar.sh
 Este comando:
 
@@ -132,3 +134,4 @@ Gestión segura de secretos
 Automatización y reproducibilidad
 
 Capacidad de depurar problemas reales de infraestructura
+
