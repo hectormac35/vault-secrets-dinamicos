@@ -14,7 +14,7 @@ jobs:
     name: Tests de la API
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
@@ -27,7 +27,7 @@ jobs:
     name: Scripts y Compose
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: ShellCheck
         run: |
           shellcheck levantar.sh parar.sh scripts/*.sh
@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [tests, lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Levantar, escribir, revocar y comprobar la rotación
         run: ./scripts/prueba-e2e.sh
       - name: Logs
