@@ -1,3 +1,7 @@
+# Demo local de credenciales dinámicas con HashiCorp Vault.
+# Arráncalo con ./levantar.sh: configura Vault en el orden correcto.
+name: vault-secrets-dinamicos
+
 services:
   vault:
     image: hashicorp/vault:1.17
@@ -6,44 +10,40 @@ services:
       - IPC_LOCK
     environment:
       VAULT_ADDR: "http://127.0.0.1:8200"
-      VAULT_DEV_ROOT_TOKEN_ID: "root"
+    # Modo dev: almacenamiento en memoria y token raíz fijo. Solo para la demo.
     command: >
       vault server -dev
       -dev-root-token-id=root
       -dev-listen-address=0.0.0.0:8200
     ports:
-      - "8200:8200"
+      - "127.0.0.1:8200:8200"       # UI en http://localhost:8200 (solo desde tu PC)
     volumes:
-      - ./vault:/vault
-      - app-secrets:/secrets
+      - ./vault:/bootstrap:ro
+      - agent-auth:/agent-auth
     healthcheck:
-      test: ["CMD", "sh", "-c", "wget -qO- http://127.0.0.1:8200/v1/sys/health | grep -q 'initialized'"]
-      interval: 5s
+      test: ["CMD", "sh", "-c", "wget -qO- http://127.0.0.1:8200/v1/sys/health | grep -q '\"initialized\":true'"]
+      interval: 3s
       timeout: 3s
-      retries: 20
+      retries: 30
 
   postgres:
-    image: postgres:15
+    image: postgres:16-alpine
     container_name: vault-postgres
     environment:
       POSTGRES_DB: appdb
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: adminpassword
-    ports:
-      - "5433:5432"
+      # Solo se usa al crear el volumen. levantar.sh la cambia por una aleatoria
+      # y Vault la rota enseguida: después nadie conoce la contraseña del admin.
+      POSTGRES_PASSWORD: solo-primer-arranque
+    # Sin puertos publicados: solo Vault y la app llegan a la base de datos.
     volumes:
       - pg-data:/var/lib/postgresql/data
-
-  app:
-    build: ./app
-    container_name: demo-app
-    depends_on:
-      vault:
-        condition: service_healthy
-    volumes:
-      - app-secrets:/secrets:ro
-    ports:
-      - "8081:8080"
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d appdb"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
 
   agent:
     image: hashicorp/vault:1.17
@@ -53,12 +53,27 @@ services:
         condition: service_healthy
     environment:
       VAULT_ADDR: "http://vault:8200"
+    # Se salta el entrypoint de la imagen para ejecutar el agente directamente.
+    entrypoint: ["vault", "agent", "-config=/vault-agent/config.hcl"]
     volumes:
-      - app-secrets:/secrets
-      - ./vault/agent:/vault-agent
-    command: >
-      sh -c "vault agent -config=/vault-agent/config.hcl"
+      - agent-auth:/agent-auth:ro        # role_id / secret_id: solo el agente
+      - app-secrets:/app-secrets         # aquí escribe secret.json
+      - ./vault/agent:/vault-agent:ro
+    restart: unless-stopped
+
+  app:
+    build: ./app
+    container_name: demo-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - app-secrets:/secrets:ro          # la app solo ve secret.json
+    ports:
+      - "127.0.0.1:8081:8080"
+    restart: unless-stopped
 
 volumes:
+  agent-auth:
   app-secrets:
   pg-data:
