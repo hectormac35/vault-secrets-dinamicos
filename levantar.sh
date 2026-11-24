@@ -10,7 +10,8 @@ paso "1/5  Arrancando PostgreSQL y Vault"
 docker compose up -d --build --wait postgres vault
 
 paso "2/5  Comprobando el esquema de la base de datos"
-docker exec -i vault-postgres psql -q -v ON_ERROR_STOP=1 -U admin -d appdb < postgres/init/01-esquema.sql
+docker exec -i -e PGOPTIONS="--client-min-messages=warning" vault-postgres \
+  psql -q -v ON_ERROR_STOP=1 -U admin -d appdb < postgres/init/01-esquema.sql
 
 paso "3/5  Configurando Vault (credenciales dinámicas + AppRole)"
 # Contraseña de un solo uso para que Vault pueda conectarse; acto seguido Vault la rota.

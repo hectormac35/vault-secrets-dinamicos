@@ -45,6 +45,12 @@ Demo **DevSecOps** de cómo dejar de tener contraseñas fijas de base de datos. 
 
 Con `default_ttl = 1m` y `max_ttl = 2m`, cada usuario vive como mucho dos minutos. Si se **revoca** (`vault lease revoke -prefix database/creds/app-role`), Vault lo borra de PostgreSQL en ese momento. La API devuelve `503` unos segundos y, en cuanto el agente entrega un usuario nuevo, vuelve a funcionar sin que nadie la toque. Los tiempos se pueden cambiar con `DB_TTL` y `DB_MAX_TTL` en `vault/bootstrap_vault.sh`.
 
+### La demo de incidente, ejecutada de verdad
+
+<p align="center"><img src="docs/img/demo.png" alt="Salida real de scripts/demo.sh: revocación, 503 y nuevo usuario a los 15 segundos" width="100%"></p>
+
+En esta ejecución, la API tardó **15 segundos** en recibir un usuario nuevo después de revocar todas sus credenciales, y lo hizo sin reiniciarse.
+
 ---
 
 ## Ponerlo en marcha
