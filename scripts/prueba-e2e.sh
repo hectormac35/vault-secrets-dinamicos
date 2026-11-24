@@ -16,8 +16,9 @@ curl -fs -X POST "$API/eventos" -H 'Content-Type: application/json' -d '{"mensaj
 echo "✔ escritura con el usuario dinámico"
 
 docker exec vault-postgres psql -At -U admin -d appdb -c "SELECT 1 FROM eventos" >/dev/null
-if docker exec -e PGPASSWORD=solo-primer-arranque vault-postgres \
-  psql -h 127.0.0.1 -U admin -d appdb -c "SELECT 1" >/dev/null 2>&1; then
+# Se prueba desde otro contenedor (por la red): dentro del propio contenedor de
+# PostgreSQL las conexiones locales son "trust" y aceptarían cualquier contraseña.
+if docker exec demo-app python -c "import psycopg; psycopg.connect(host='vault-postgres', dbname='appdb', user='admin', password='solo-primer-arranque', connect_timeout=3)" >/dev/null 2>&1; then
   falla "la contraseña inicial del admin sigue funcionando"
 fi
 echo "✔ contraseña del admin rotada por Vault"
